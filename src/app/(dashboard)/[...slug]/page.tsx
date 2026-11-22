@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Construction } from "lucide-react";
 
-export default function PlannedPage({ params }: { params: { slug: string[] } }) {
-  const name = params.slug.join(" / ").replace(/-/g, " ");
+export default async function PlannedPage({ params }: { params: Promise<{ slug: string[] }> }) {
+  const { slug } = await params;
+  const name = slug.join(" / ").replace(/-/g, " ");
   return (
     <div className="card mx-auto mt-10 max-w-lg text-center">
       <Construction className="mx-auto text-signal" />

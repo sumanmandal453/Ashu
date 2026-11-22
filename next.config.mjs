@@ -1,1 +1,3 @@
-const nextConfig = {}; export default nextConfig;
+const nextConfig = { turbopack: { root: process.cwd() } };
+
+export default nextConfig;

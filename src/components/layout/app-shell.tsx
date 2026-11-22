@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { UserButton, useClerk, useUser } from "@clerk/nextjs";
 import {
   LayoutDashboard, ClipboardList, Sparkles, BookOpen, CalendarDays, Send, Bell, Plug, BarChart3,
   Settings, Menu, X, Search, Moon, Sun, HelpCircle, PanelLeftClose, PanelLeftOpen, LogOut,
@@ -44,18 +45,22 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
 }
 
 function Profile({ collapsed }: { collapsed: boolean }) {
+  const { user: cu } = useUser();
+  const { signOut } = useClerk();
+  const name = cu?.fullName ?? user.name;
+  const email = cu?.primaryEmailAddress?.emailAddress ?? "";
   return (
     <div className="border-t border-slate-200 p-3 dark:border-white/10">
       <div className="flex items-center gap-3 rounded-xl p-2">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-sm font-semibold text-white">AS</span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-sm font-semibold text-white">{name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}</span>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{user.name}</p>
-            <p className="truncate text-xs text-slate-500">Sem {user.semester} · {user.department}</p>
+            <p className="truncate text-sm font-medium">{name}</p>
+            <p className="truncate text-xs text-slate-500">{email}</p>
           </div>
         )}
         {!collapsed && (
-          <button aria-label="Log out" onClick={() => toast.info("Auth is not configured in this demo build.")} className="text-slate-400 hover:text-slate-700"><LogOut size={16} /></button>
+          <button aria-label="Log out" onClick={() => signOut({ redirectUrl: "/sign-in" })} className="text-slate-400 hover:text-slate-700"><LogOut size={16} /></button>
         )}
       </div>
     </div>
@@ -67,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [drawer, setDrawer] = useState(false);
   const [dark, setDark] = useState(false);
   const path = usePathname();
-  const title = NAV.find((n) => path.startsWith(n.href.split("/").slice(0, 2).join("/")))?.label ?? "Ashu";
+  const title = NAV.find((n) => path.startsWith(n.href.split("/").slice(0, 2).join("/")))?.label ?? "Asu";
 
   useEffect(() => { setDark(document.documentElement.classList.contains("dark")); }, []);
   const toggleTheme = () => {
@@ -120,6 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <button aria-label="Toggle theme" onClick={toggleTheme} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-white/10">{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
           <button aria-label="Help" className="hidden rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-white/10 sm:block" onClick={() => toast.info("Help centre is not configured yet.")}><HelpCircle size={18} /></button>
+          <UserButton />
         </header>
         <main className="px-4 py-6 sm:px-8">{children}</main>
       </div>
