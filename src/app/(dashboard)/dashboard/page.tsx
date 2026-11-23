@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict, isPast } from "date-fns";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ClipboardList, Sparkles, Clock, UserCheck, CheckCircle2, AlertTriangle, Upload, CalendarDays, Plug } from "lucide-react";
-import { assignments, subjects, subjectName, weeklyCompletion, activity, user } from "@/lib/mock-data";
+import { assignments, subjects, subjectName, weeklyCompletion, activity } from "@/lib/mock-data";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,8 @@ const COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
+  const { user: clerkUser } = useUser();
+  const firstName = clerkUser?.firstName ?? "";
   useEffect(() => setMounted(true), []);
 
   const upcoming = [...assignments].filter((a) => a.status !== "submitted").sort((a, b) => +new Date(a.deadline) - +new Date(b.deadline));
@@ -32,7 +35,7 @@ export default function Dashboard() {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <section className="rounded-3xl bg-ink p-6 text-white sm:p-8">
-        <p className="font-display text-2xl font-semibold sm:text-3xl">{greet}, {user.name.split(" ")[0]}.</p>
+        <p className="font-display text-2xl font-semibold sm:text-3xl">{greet}{firstName ? `, ${firstName}` : ""}.</p>
         <p className="mt-2 max-w-xl text-indigo-100/80">
           {stats[2].value} assignments are in progress and {stats[3].value} is waiting for your approval. Clustering Algorithms (Data Mining) is due soonest.
         </p>
