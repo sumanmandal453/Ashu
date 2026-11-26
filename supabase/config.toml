@@ -1,0 +1,12 @@
+# Local Supabase configuration. Replace the Clerk domain with your Clerk instance domain.
+project_id = "ashu"
+
+[api]
+enabled = true
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth.third_party.clerk]
+enabled = true
+domain = "YOUR_CLERK_INSTANCE.clerk.accounts.dev"
