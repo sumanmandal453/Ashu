@@ -27,8 +27,6 @@ create table if not exists public.college_integrations (
   external_student_id text,
   connection_status text not null default 'not_connected',
   permission_status text not null default 'not_verified',
-  encrypted_credentials text,
-  credential_expires_at timestamptz,
   last_synced_at timestamptz,
   next_sync_at timestamptz,
   sync_interval_minutes integer not null default 15 check (sync_interval_minutes between 5 and 1440),
@@ -37,6 +35,25 @@ create table if not exists public.college_integrations (
   updated_at timestamptz not null default now(),
   unique (user_id, provider)
 );
+
+-- Private storage for integration credentials.
+-- Only the backend service_role can access this table.
+create table if not exists public.college_integration_secrets (
+  integration_id uuid primary key
+    references public.college_integrations(id) on delete cascade,
+  encrypted_credentials text not null,
+  credential_expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.college_integration_secrets enable row level security;
+
+revoke all privileges on table public.college_integration_secrets
+  from PUBLIC, anon, authenticated;
+
+grant all privileges on table public.college_integration_secrets
+  to service_role;
 
 create table if not exists public.subjects (
   id uuid primary key default gen_random_uuid(),

@@ -22,11 +22,15 @@ def _items(payload: Any) -> list[dict[str, Any]]:
 
 async def sync_digiicampus(user_id: str, integration: dict[str, Any], db, *, client: DigiiCampusClient | None = None) -> dict[str, int]:
     if client is None:
-        auth_token = None
-        if integration.get("encrypted_credentials"):
-            from app.core.credential_encryption import decrypt_credential
-            auth_token = decrypt_credential(integration["encrypted_credentials"])
-        client = DigiiCampusClient(auth_token=auth_token, external_student_id=integration.get("external_student_id"))
+        from app.services.integration_secrets import load_integration_credential
+
+        auth_token = await load_integration_credential(
+            db, str(integration["id"])
+        )
+        client = DigiiCampusClient(
+            auth_token=auth_token,
+            external_student_id=integration.get("external_student_id"),
+        )
     assignment_service = AssignmentService(Repository(db, user_id))
     started = datetime.now(timezone.utc)
     counts = {"courses_found": 0, "assignments_found": 0, "assignments_created": 0, "assignments_updated": 0, "resources_found": 0}

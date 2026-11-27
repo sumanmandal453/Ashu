@@ -9,4 +9,4 @@ max_rows = 1000
 
 [auth.third_party.clerk]
 enabled = true
-domain = "YOUR_CLERK_INSTANCE.clerk.accounts.dev"
+domain = "free-mutt-2266.clerk.accounts.dev"

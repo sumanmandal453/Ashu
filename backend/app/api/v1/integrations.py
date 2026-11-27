@@ -5,6 +5,11 @@ from app.core.dependencies import get_supabase
 from app.core.exceptions import IntegrationUnavailable
 from app.core.responses import success
 from app.database.supabase_rest import SupabaseRestClient
+from app.database.admin import get_admin_client
+from app.services.integration_secrets import (
+    delete_integration_credential,
+    load_integration_credential,
+)
 from app.integrations.digiicampus.client import DigiiCampusClient
 from app.integrations.digiicampus.sync import sync_digiicampus
 from app.services.queue_service import enqueue_job
@@ -16,8 +21,6 @@ router = APIRouter(prefix="/integrations", tags=["integrations"])
 @router.get("")
 async def list_integrations(user: CurrentUser = Depends(get_current_user), db: SupabaseRestClient = Depends(get_supabase)):
     rows = await db.select("college_integrations", query={"user_id": f"eq.{user.user_id}"}, limit=30)
-    for row in rows:
-        row.pop("encrypted_credentials", None)
     return success(rows)
 
 
@@ -42,10 +45,13 @@ async def test_digii(user: CurrentUser = Depends(get_current_user), db: Supabase
         raise HTTPException(404, "Connect Digiicampus first")
     if not settings.digii_readonly_enabled:
         raise HTTPException(503, "Digiicampus connector is disabled pending Bhawanipur endpoint and authorization verification")
-    auth_token = None
-    if rows[0].get("encrypted_credentials"):
-        from app.core.credential_encryption import decrypt_credential
-        auth_token = decrypt_credential(rows[0]["encrypted_credentials"])
+    admin = get_admin_client()
+    try:
+        auth_token = await load_integration_credential(
+            admin, rows[0]["id"]
+        )
+    finally:
+        await admin.aclose()
     client = DigiiCampusClient(auth_token=auth_token, external_student_id=rows[0].get("external_student_id"))
     try:
         result = await client.test_connection()
@@ -73,7 +79,6 @@ async def sync_digii(user: CurrentUser = Depends(get_current_user), db: Supabase
 async def digii_status(user: CurrentUser = Depends(get_current_user), db: SupabaseRestClient = Depends(get_supabase)):
     rows = await db.select("college_integrations", query={"user_id": f"eq.{user.user_id}", "provider": "eq.digiicampus"}, limit=1)
     row = rows[0] if rows else {"connection_status": "not_connected"}
-    row.pop("encrypted_credentials", None)
     return success(row)
 
 
@@ -97,7 +102,31 @@ async def digii_notifications(user: CurrentUser = Depends(get_current_user), db:
 
 @router.delete("/digii/disconnect")
 async def disconnect_digii(user: CurrentUser = Depends(get_current_user), db: SupabaseRestClient = Depends(get_supabase)):
-    await db.update("college_integrations", {"connection_status": "disconnected", "encrypted_credentials": None}, query={"user_id": f"eq.{user.user_id}", "provider": "eq.digiicampus"})
+    rows = await db.select(
+        "college_integrations",
+        query={
+            "user_id": f"eq.{user.user_id}",
+            "provider": "eq.digiicampus",
+        },
+        select="id",
+        limit=1,
+    )
+
+    if rows:
+        admin = get_admin_client()
+        try:
+            await delete_integration_credential(admin, rows[0]["id"])
+        finally:
+            await admin.aclose()
+
+    await db.update(
+        "college_integrations",
+        {"connection_status": "disconnected"},
+        query={
+            "user_id": f"eq.{user.user_id}",
+            "provider": "eq.digiicampus",
+        },
+    )
     return success({"disconnected": True})
 
 
